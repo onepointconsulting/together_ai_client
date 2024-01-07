@@ -13,7 +13,7 @@ use crate::args::{AnswerCommand, ClapArgs};
 use clap::Parser;
 use eventsource_client::Error;
 use crate::constants::{JSON_TYPE, KEY_MODEL, KEY_TOGETHER_API, PROMPT_TOKEN};
-use crate::models::{call_list_models, find_model_prompt};
+use crate::models::{call_list_models, find_model_config};
 
 mod args;
 mod models;
@@ -61,14 +61,18 @@ async fn call_streaming(args: AnswerCommand) -> Result<(), es::Error> {
 async fn process_single_model(args: &AnswerCommand, model: String) -> Result<(), Error> {
     let together_api_key = env::var(KEY_TOGETHER_API).unwrap();
     let user_prompt = args.prompt.clone();
-    let model_prompt = find_model_prompt(model.clone()).await.unwrap();
+    let model_config = find_model_config(model.clone()).await.unwrap();
+    let model_prompt = model_config.prompt;
+    let stop_words = model_config.stop_words;
     let prompt = str::replace(&model_prompt, PROMPT_TOKEN, user_prompt.as_str());
 
-    let temperature = 0.0;
+    let max_tokens = args.max_tokens.unwrap_or(512);
+    let temperature = args.temperature.unwrap_or(0.0);
+
     let body = format!("{{\
         \"model\": \"{model}\",\
         \"prompt\": \"{prompt}\",\
-        \"max_tokens\": 512,\
+        \"max_tokens\": {max_tokens},\
         \"temperature\": {temperature},\
         \"top_p\": 0.7,\
         \"top_k\": 50,\
@@ -90,21 +94,31 @@ async fn process_single_model(args: &AnswerCommand, model: String) -> Result<(),
         )
         .build();
 
-    let mut stream = tail_events(client);
+    let mut stream = tail_events(client, stop_words.clone());
 
     while let Ok(Some(_)) = stream.try_next().await {}
     Ok(())
 }
 
-fn tail_events(client: impl es::Client) -> impl Stream<Item = Result<(), ()>> {
+fn tail_events(client: impl es::Client, stop_words: Vec<String>) -> impl Stream<Item = Result<(), ()>> {
     client
         .stream()
-        .map_ok(|event| match event {
+        .map_ok(move |event| match event {
             es::SSE::Event(ev) => {
                 match extract_text(ev.data) {
                     Ok(token) => {
-                        print!("{token}");
-                        let _ = stdout().flush();
+                        let mut is_stop_word = false;
+                        for stop_word in &stop_words {
+                            if token == *stop_word {
+                                is_stop_word = true;
+                                break; // break out of the for loop
+                            }
+                        }
+                        if !is_stop_word {
+                            // Only print if not a stop word
+                            print!("{token}");
+                            let _ = stdout().flush();
+                        }
                     }
                     Err(_) => {
                         print!("")

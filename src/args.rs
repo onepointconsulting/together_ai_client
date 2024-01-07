@@ -35,9 +35,13 @@ pub(crate) struct AnswerCommand {
     #[clap(short, long, num_args = 0..)]
     pub(crate) models: Option<Vec<String>>,
 
+    /// The maximum tokens to generate.
+    #[clap(short, long)]
+    pub(crate) max_tokens: Option<usize>,
+
     /// The temperature to use.
     #[clap(short, long)]
-    temperature: Option<f32>,
+    pub(crate) temperature: Option<f32>,
 
     /// The top p to use.
     #[clap(long)]
