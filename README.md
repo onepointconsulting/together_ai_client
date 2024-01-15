@@ -26,7 +26,7 @@ TOGETHER_API_KEY=your-api-key
 ## Usage Examples:
 
 ```bash
-together_ai_experiments.exe --help
+together_ai_client.exe --help
 ```
 
 Displays the help message, like something along these lines:
@@ -35,9 +35,9 @@ Displays the help message, like something along these lines:
 Simple program to test on the command line together.ai's API.
 
  Here are some examples:
- together_ai_experiments.exe answer -p "Who is the Jeremy Howard, the founder of fast.ai?" -m upstage/SOLAR-10.7B-Instruct-v1.0 togethercomputer/falcon-40b-instruct mistralai/Mixtral-8x7B-Instruct-v0.1
+ together_ai_client.exe answer -p "Who is the Jeremy Howard, the founder of fast.ai?" -m upstage/SOLAR-10.7B-Instruct-v1.0 togethercomputer/falcon-40b-instruct mistralai/Mixtral-8x7B-Instruct-v0.1
 
-Usage: together_ai_experiments.exe <COMMAND>
+Usage: together_ai_client.exe <COMMAND>
 
 Commands:
   list-models  List models available to the API key
@@ -52,13 +52,13 @@ Options:
 Using all chat models in Together AI. (May take a while to complete):
 
 ```bash
-together_ai_experiments.exe answer -p "What is the Knapsack problems in computer science?" -a
+together_ai_client.exe answer -p "What is the Knapsack problems in computer science?" -a
 ```
 
 Using a specific model:
 
 ```bash
-together_ai_experiments.exe answer -p "Who is the Jeremy Howard, the founder of fast.ai?" -m upstage/SOLAR-10.7B-Instruct-v1.0 togethercomputer/falcon-40b-instruct mistralai/Mixtral-8x7B-Instruct-v0.1
+together_ai_client.exe answer -p "Who is the Jeremy Howard, the founder of fast.ai?" -m upstage/SOLAR-10.7B-Instruct-v1.0 togethercomputer/falcon-40b-instruct mistralai/Mixtral-8x7B-Instruct-v0.1
 ```
 
 Using a file as input with `--prompt-is-file`:
