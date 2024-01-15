@@ -1,7 +1,9 @@
 use clap::{Args, Parser, Subcommand};
 
-/// Simple program to test on the command line together.ai's API.
 #[derive(Parser, Debug)]
+/// Simple program to test on the command line together.ai's API.{n}{n}
+/// Here are some examples:{n}
+/// together_ai_experiments.exe answer -p "Who is the Jeremy Howard, the founder of fast.ai?" -m upstage/SOLAR-10.7B-Instruct-v1.0 togethercomputer/falcon-40b-instruct mistralai/Mixtral-8x7B-Instruct-v0.1
 #[command(author, version, about, long_about = None)]
 pub(crate) struct ClapArgs {
 
@@ -20,9 +22,7 @@ pub(crate) enum TogetherAiSubcommand {
 }
 
 #[derive(Debug, Args)]
-pub(crate) struct ListModelsCommand {
-
-}
+pub(crate) struct ListModelsCommand {}
 
 #[derive(Debug, Args)]
 pub(crate) struct AnswerCommand {
@@ -35,23 +35,31 @@ pub(crate) struct AnswerCommand {
     #[clap(short, long, num_args = 0..)]
     pub(crate) models: Option<Vec<String>>,
 
+    /// Whether to try out all chat models or not
+    #[clap(short, long, action)]
+    pub(crate) all_models: bool,
+
+    /// Whether the prompt is a normal question of a file from which the prompt should be read.
+    #[clap(long, action)]
+    pub(crate) prompt_is_file: bool,
+
     /// The maximum tokens to generate.
-    #[clap(short, long)]
+    #[clap(long)]
     pub(crate) max_tokens: Option<usize>,
 
-    /// The temperature to use.
+    /// The temperature to use. Defaults to 0.0.
     #[clap(short, long)]
     pub(crate) temperature: Option<f32>,
 
     /// The top p to use.
     #[clap(long)]
-    top_p: Option<f32>,
+    pub(crate) top_p: Option<f32>,
 
     /// The top k to use.
     #[clap(long)]
-    top_k: Option<u32>,
+    pub(crate) top_k: Option<u32>,
 
     /// The repetition penalty to use.
     #[clap(short, long)]
-    repetition_penalty: Option<f32>,
+    pub(crate) repetition_penalty: Option<f32>,
 }

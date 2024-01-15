@@ -8,12 +8,13 @@ use std::io::stdout;
 use dotenvy::dotenv;
 use std::env;
 use std::str;
+use std::process;
 use futures::{TryStreamExt};
 use crate::args::{AnswerCommand, ClapArgs};
 use clap::Parser;
 use eventsource_client::Error;
 use crate::constants::{JSON_TYPE, KEY_MODEL, KEY_TOGETHER_API, PROMPT_TOKEN};
-use crate::models::{call_list_models, find_model_config};
+use crate::models::{call_list_models, create_client, find_model_config};
 
 mod args;
 mod models;
@@ -42,10 +43,27 @@ async fn call_streaming(args: AnswerCommand) -> Result<(), es::Error> {
     let model = env::var(KEY_MODEL).or::<String>(Ok("togethercomputer/llama-2-70b-chat".to_string())).unwrap();
     let mut models = vec![];
     let models_clone = args.models.clone();
-    if models_clone.is_some() {
-        models = models_clone.unwrap();
-    } else {
-        models.push(model.clone());
+    if args.all_models {
+        let res = create_client().await;
+        match res {
+            Ok(res) => {
+                let sorted_models = models::list_chat_models(res).await;
+                for model in sorted_models {
+                    models.push(model);
+                }
+            }
+            Err(err) => {
+                eprintln!("Could not fetch all models: {}", err);
+                process::exit(1);
+            }
+        }
+    }
+    if models.is_empty() {
+        if models_clone.is_some() {
+            models = models_clone.unwrap();
+        } else {
+            models.push(model.clone());
+        }
     }
     let print_model = models.len() > 1;
     for model in models {
@@ -60,7 +78,7 @@ async fn call_streaming(args: AnswerCommand) -> Result<(), es::Error> {
 
 async fn process_single_model(args: &AnswerCommand, model: String) -> Result<(), Error> {
     let together_api_key = env::var(KEY_TOGETHER_API).unwrap();
-    let user_prompt = args.prompt.clone();
+    let user_prompt = read_model_prompt(&args);
     let model_config = find_model_config(model.clone()).await.unwrap();
     let model_prompt = model_config.prompt;
     let stop_words = model_config.stop_words;
@@ -68,15 +86,18 @@ async fn process_single_model(args: &AnswerCommand, model: String) -> Result<(),
 
     let max_tokens = args.max_tokens.unwrap_or(512);
     let temperature = args.temperature.unwrap_or(0.0);
+    let top_p = args.top_p.unwrap_or(0.7);
+    let top_k = args.top_k.unwrap_or(50);
+    let repetition_penalty = args.repetition_penalty.unwrap_or(1.);
 
     let body = format!("{{\
         \"model\": \"{model}\",\
         \"prompt\": \"{prompt}\",\
         \"max_tokens\": {max_tokens},\
         \"temperature\": {temperature},\
-        \"top_p\": 0.7,\
-        \"top_k\": 50,\
-        \"repetition_penalty\": 1,\
+        \"top_p\": {top_p},\
+        \"top_k\": {top_k},\
+        \"repetition_penalty\": {repetition_penalty},\
         \"stream_tokens\": true}}");
     let client = es::ClientBuilder::for_url("https://api.together.xyz/inference")?
         .header("Authorization", format!("Bearer {together_api_key}").as_str())?
@@ -98,6 +119,24 @@ async fn process_single_model(args: &AnswerCommand, model: String) -> Result<(),
 
     while let Ok(Some(_)) = stream.try_next().await {}
     Ok(())
+}
+
+fn read_model_prompt(args: &AnswerCommand) -> String {
+    let prompt = args.prompt.clone();
+    if !args.prompt_is_file {
+        return prompt
+    } else {
+        let res = std::fs::read_to_string(prompt);
+        match res {
+            Ok(res) => {
+                return res;
+            }
+            Err(err) => {
+                eprintln!("Could not read prompt file: {}", err);
+                process::exit(1);
+            }
+        }
+    }
 }
 
 fn tail_events(client: impl es::Client, stop_words: Vec<String>) -> impl Stream<Item = Result<(), ()>> {

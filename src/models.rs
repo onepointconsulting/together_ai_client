@@ -1,7 +1,7 @@
 use std::env;
 
 use reqwest::{Error, Response};
-use serde_json::{Map, Value};
+use serde_json::{Map, Value as JsonValue};
 
 use crate::constants::{KEY_TOGETHER_API, PROMPT_TOKEN};
 
@@ -14,15 +14,7 @@ pub(crate) async fn call_list_models() {
     let res = create_client().await;
     match res {
         Ok(res) => {
-            let models = extract_models_array(res).await;
-            let mut sorted_models = models.iter()
-                .filter(|model| model["name"].as_str().is_some())
-                .filter(|model| model["display_type"].as_str().is_some())
-                .filter(|model| model["display_type"].as_str().unwrap() == "chat")
-                .map(|model| {
-                    model["name"].as_str().unwrap()
-                }).collect::<Vec<_>>().to_vec();
-            sorted_models.sort();
+            let sorted_models = list_chat_models(res).await;
             for model in sorted_models {
                 println!("{}", model);
             }
@@ -33,17 +25,43 @@ pub(crate) async fn call_list_models() {
     }
 }
 
-async fn extract_models_array(res: Response) -> Vec<Value> {
+pub(crate) async fn list_chat_models(res: Response) -> Vec<String> {
+    let models = extract_models_array(res).await;
+    let mut sorted_models = models.iter()
+        .filter(|model| model["name"].as_str().is_some())
+        .filter(|model| model["display_type"].as_str().is_some())
+        .filter(|model| model["display_type"].as_str().unwrap() == "chat")
+        .map(|model| {
+            model["name"].as_str().unwrap().to_string()
+        }).collect::<Vec<_>>().to_vec();
+    sorted_models.sort();
+    sorted_models
+}
+
+pub(crate) async fn extract_models_array(res: Response) -> Vec<JsonValue> {
     let body = res.text().await.unwrap();
-    let v: Value = serde_json::from_str(&body).unwrap();
-    let models = v.as_array().unwrap();
-    models.clone()
+    let result = serde_json::from_str::<JsonValue>(&body);
+    match result {
+        Ok(v) => {
+            let models = v.as_array().unwrap();
+            models.clone()
+        }
+        Err(err) => {
+            eprintln!("Error: {}", err);
+            vec![]
+        }
+    }
 }
 
 pub(crate) async fn find_model_config(model_search: String) -> Result<ModelConfig, Error> {
     find_in_model(model_search, |config| {
-        let prompt = config["prompt_format"].as_str().unwrap();
-        let stop_words_vec = config["stop"].as_array().unwrap();
+        let contains_prompt = config.contains_key("prompt_format");
+        let prompt = if contains_prompt  { config["prompt_format"].as_str().or(Some(PROMPT_TOKEN)).unwrap() }
+            else { PROMPT_TOKEN };
+        let empty = vec![];
+        let contains_stop = config.contains_key("stop");
+        let stop_words_vec = if contains_stop { config["stop"].as_array().or(Some(&empty)).unwrap() }
+            else { &empty };
         let stop_words = stop_words_vec.iter().map(|stop_word| stop_word.as_str().unwrap().to_string()).collect();
         ModelConfig {
             prompt: prompt.to_string(),
@@ -56,24 +74,31 @@ pub(crate) async fn find_model_config(model_search: String) -> Result<ModelConfi
 }
 
 pub(crate) async fn find_in_model<T>(model_search: String,
-                                     extract_fn: fn(&Map<String, Value>) -> T,
+                                     extract_fn: fn(&Map<String, JsonValue>) -> T,
                                      default_fn: fn() -> T) -> Result<T, Error> {
     let res = create_client().await;
     match res {
         Ok(res) => {
             let models = extract_models_array(res).await;
-            let model = models.iter().find(|model| model["name"].as_str().unwrap() == model_search)
-                .expect("Could not find model. Make sure this model exists and is a chat model.");
-            let config_object: Option<&Map<String, Value>> = model["config"].as_object();
-            return match config_object {
-                Some(config) => {
-                    Ok(extract_fn(config))
+            let model_option = models.iter().find(|model| model["name"].as_str().unwrap() == model_search);
+            match model_option {
+                Some(model) => {
+                    let config_object: Option<&Map<String, JsonValue>> = model["config"].as_object();
+                    return match config_object {
+                        Some(config) => {
+                            Ok(extract_fn(config))
+                        }
+                        None => {
+                            eprintln!("Warning: Could not find prompt_format in model config.");
+                            Ok(default_fn())
+                        }
+                    };
                 }
                 None => {
-                    eprintln!("Warning: Could not find prompt_format in model config.");
+                    eprintln!("Warning: Could not find model {}.", model_search);
                     Ok(default_fn())
                 }
-            };
+            }
         }
         Err(err) => {
             eprintln!("Error: {}", err);
@@ -83,7 +108,7 @@ pub(crate) async fn find_in_model<T>(model_search: String,
 }
 
 
-async fn create_client() -> Result<Response, Error> {
+pub(crate) async fn create_client() -> Result<Response, Error> {
     let together_api_key = env::var(KEY_TOGETHER_API).unwrap();
     let client = reqwest::Client::new();
     let res = client

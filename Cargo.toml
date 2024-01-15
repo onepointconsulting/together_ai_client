@@ -1,5 +1,5 @@
 [package]
-name = "together_ai_experiments"
+name = "together_ai_client"
 version = "0.1.0"
 edition = "2021"
 
