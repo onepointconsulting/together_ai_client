@@ -31,6 +31,8 @@ pub(crate) async fn list_chat_models(res: Response) -> Vec<String> {
         .filter(|model| model["name"].as_str().is_some())
         .filter(|model| model["display_type"].as_str().is_some())
         .filter(|model| model["display_type"].as_str().unwrap() == "chat")
+        .filter(|model| model["isFeaturedModel"].as_bool().is_some())
+        .filter(|model| model["isFeaturedModel"].as_bool().unwrap() == true)
         .map(|model| {
             model["name"].as_str().unwrap().to_string()
         }).collect::<Vec<_>>().to_vec();
