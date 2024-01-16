@@ -10,4 +10,6 @@ The Met Office has issued yellow snow and ice warnings as temperatures are expec
 A snow and ice warning is in place from 3am on Monday until 9am on Tuesday across Northern Ireland. In Scotland a similar warning is in place in northern areas from midnight on Sunday until midnight on Monday. The warning area will then spread across the whole of Scotland and into northern England on Tuesday.
 ```
 
-When printing out the table with the ontologies, can you please surround the markdown tables with a code block? This is done by adding 3 backticks (```) before and after the table. This will make it easier to copy and paste the table into a markdown file.
+When printing out the table with the ontologies, can you please surround the markdown tables with a code block? This is done by adding 3 backticks (```) before and after the table.
+This will make it easier to copy and paste the table into a markdown file.
+Many thanks!

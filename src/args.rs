@@ -6,19 +6,35 @@ use clap::{Args, Parser, Subcommand};
 /// together_ai_experiments.exe answer -p "Who is the Jeremy Howard, the founder of fast.ai?" -m upstage/SOLAR-10.7B-Instruct-v1.0 togethercomputer/falcon-40b-instruct mistralai/Mixtral-8x7B-Instruct-v0.1
 #[command(author, version, about, long_about = None)]
 pub(crate) struct ClapArgs {
-
     #[clap[subcommand]]
     pub(crate) subcommand: TogetherAiSubcommand,
 }
 
 #[derive(Debug, Subcommand)]
 pub(crate) enum TogetherAiSubcommand {
-
     /// List models available to the API key.
     ListModels(ListModelsCommand),
 
-    /// Answer a prompt.
+    /// Answer a prompt with a chat model.
     Answer(AnswerCommand),
+
+    /// Create embeddings file from a text file.
+    Embeddings(EmbeddingsCommand),
+}
+
+#[derive(Debug, Args)]
+pub(crate) struct EmbeddingsCommand {
+    /// The file to read from.
+    #[clap(short, long)]
+    pub(crate) file: String,
+
+    /// The model to use.
+    #[clap(short, long, num_args = 0..)]
+    pub(crate) models: Option<Vec<String>>,
+
+    /// The folder to write to.
+    #[clap(long)]
+    pub(crate) folder: String,
 }
 
 #[derive(Debug, Args)]
@@ -26,7 +42,6 @@ pub(crate) struct ListModelsCommand {}
 
 #[derive(Debug, Args)]
 pub(crate) struct AnswerCommand {
-
     /// The prompt to send to the API.
     #[clap(short, long)]
     pub(crate) prompt: String,

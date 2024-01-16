@@ -1,9 +1,8 @@
-use std::env;
-
 use reqwest::{Error, Response};
 use serde_json::{Map, Value as JsonValue};
 
-use crate::constants::{KEY_TOGETHER_API, PROMPT_TOKEN};
+use crate::constants::{KEY_TOGETHER_API, MODELS_ENDPOINT, PROMPT_TOKEN};
+use crate::rest_client::create_client;
 
 pub(crate) struct ModelConfig {
     pub(crate) prompt: String,
@@ -11,7 +10,7 @@ pub(crate) struct ModelConfig {
 }
 
 pub(crate) async fn call_list_models() {
-    let res = create_client().await;
+    let res = create_client(MODELS_ENDPOINT).await;
     match res {
         Ok(res) => {
             let sorted_models = list_chat_models(res).await;
@@ -78,7 +77,7 @@ pub(crate) async fn find_model_config(model_search: String) -> Result<ModelConfi
 pub(crate) async fn find_in_model<T>(model_search: String,
                                      extract_fn: fn(&Map<String, JsonValue>) -> T,
                                      default_fn: fn() -> T) -> Result<T, Error> {
-    let res = create_client().await;
+    let res = create_client(MODELS_ENDPOINT).await;
     match res {
         Ok(res) => {
             let models = extract_models_array(res).await;
@@ -110,13 +109,4 @@ pub(crate) async fn find_in_model<T>(model_search: String,
 }
 
 
-pub(crate) async fn create_client() -> Result<Response, Error> {
-    let together_api_key = env::var(KEY_TOGETHER_API).unwrap();
-    let client = reqwest::Client::new();
-    let res = client
-        .get("https://api.together.xyz/api/models?&info")
-        .header("Authorization", format!("Bearer {together_api_key}").as_str())
-        .send()
-        .await;
-    res
-}
+

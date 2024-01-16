@@ -67,6 +67,12 @@ Using a file as input with `--prompt-is-file`:
 together_ai_client.exe answer -p ..\..\prompts\prompt_example.txt -a --prompt-is-file
 ```
 
+Extracting an embedding into a folder:
+
+```bash
+together_ai_client.exe embeddings -f ..\..\prompts\prompt_example.txt --folder test
+```
+
 
 
 

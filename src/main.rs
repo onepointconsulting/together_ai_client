@@ -1,24 +1,29 @@
+use std::env;
+use std::io::stdout;
+use std::io::Write;
+use std::process;
+use std::str;
 use std::time::Duration;
 
+use clap::Parser;
+use dotenvy::dotenv;
 use eventsource_client as es;
+use eventsource_client::Error;
+use futures::TryStreamExt;
 use futures::Stream;
 use serde_json::{Result as JsonResult, Value};
-use std::io::Write;
-use std::io::stdout;
-use dotenvy::dotenv;
-use std::env;
-use std::str;
-use std::process;
-use futures::{TryStreamExt};
+
 use crate::args::{AnswerCommand, ClapArgs};
-use clap::Parser;
-use eventsource_client::Error;
-use crate::constants::{JSON_TYPE, KEY_MODEL, KEY_TOGETHER_API, PROMPT_TOKEN};
-use crate::models::{call_list_models, create_client, find_model_config};
+use crate::constants::{JSON_TYPE, KEY_MODEL, KEY_TOGETHER_API, MODELS_ENDPOINT, PROMPT_TOKEN};
+use crate::embeddings::call_embeddings;
+use crate::models::{call_list_models, find_model_config};
+use crate::rest_client::create_client;
 
 mod args;
 mod models;
 mod constants;
+mod rest_client;
+mod embeddings;
 
 #[tokio::main]
 async fn main() {
@@ -35,6 +40,9 @@ async fn main() {
         args::TogetherAiSubcommand::Answer(answer) => {
             call_streaming(answer).await.unwrap();
         }
+        args::TogetherAiSubcommand::Embeddings(embeddings) => {
+            call_embeddings(embeddings).await;
+        }
     }
 }
 
@@ -44,7 +52,7 @@ async fn call_streaming(args: AnswerCommand) -> Result<(), es::Error> {
     let mut models = vec![];
     let models_clone = args.models.clone();
     if args.all_models {
-        let res = create_client().await;
+        let res = create_client(MODELS_ENDPOINT).await;
         match res {
             Ok(res) => {
                 let sorted_models = models::list_chat_models(res).await;
