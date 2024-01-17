@@ -1,7 +1,7 @@
 use reqwest::{Error, Response};
 use serde_json::{Map, Value as JsonValue};
 
-use crate::constants::{KEY_TOGETHER_API, MODELS_ENDPOINT, PROMPT_TOKEN};
+use crate::constants::{MODELS_ENDPOINT, PROMPT_TOKEN};
 use crate::rest_client::create_client;
 
 pub(crate) struct ModelConfig {

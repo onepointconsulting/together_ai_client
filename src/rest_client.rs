@@ -17,7 +17,7 @@ pub(crate) async fn create_embedding(end_point: &str, data: String, model: Strin
     let together_api_key = env::var(KEY_TOGETHER_API).unwrap();
     let client = reqwest::Client::new();
     let body = format!("{{\"input\": \"{}\", \"model\": \"{}\"}}", data, model);
-    println!("body: {}", body);
+    println!("{}", body);
     let res = client
         .post(end_point)
         .header("Authorization", format!("Bearer {together_api_key}").as_str())

@@ -41,7 +41,7 @@ async fn main() {
             call_streaming(answer).await.unwrap();
         }
         args::TogetherAiSubcommand::Embeddings(embeddings) => {
-            call_embeddings(embeddings).await;
+            call_embeddings(embeddings).await.unwrap();
         }
     }
 }
